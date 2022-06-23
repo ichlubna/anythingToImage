@@ -37,7 +37,7 @@ def toImage():
             result[i] = int.from_bytes(file.read(reads), "little")
 
         result = numpy.reshape(result, (dimension, dimension, depth))
-        cv2.imwrite(os.path.join(path, str(b)+fileName), result)
+        cv2.imwrite(os.path.join(path, str(b).zfill(5)+fileName), result)
 
 def fromImage():
     path, fileName = os.path.split(sys.argv[1])
