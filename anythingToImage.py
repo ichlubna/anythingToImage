@@ -22,6 +22,7 @@ def toImage():
         dimension = math.ceil(math.sqrt(size/depth))
         if sys.argv[4] == "16":
             dimension = math.ceil(math.sqrt(math.ceil(size/2)/depth))
+            size /= 2
     sizeLimit = dimension*dimension*depth
 
     fileCount = int(math.ceil(float(size)/sizeLimit))
@@ -32,13 +33,8 @@ def toImage():
             result = numpy.zeros(dimension*dimension*depth, numpy.uint16)
             reads = 2
 
-        byte = file.read(1)
         for i in range(0, len(result)):
-            byteList = [0,0]
-            for j in range(reads):
-                byteList[j] = int.from_bytes(byte, "little")
-                byte = file.read(1)
-            result[i] = int.from_bytes(byteList, "little")
+            result[i] = int.from_bytes(file.read(reads), "little")
 
         result = numpy.reshape(result, (dimension, dimension, depth))
         cv2.imwrite(os.path.join(path, str(b)+fileName), result)
@@ -57,20 +53,27 @@ def fromImage():
 
     allData = []
     for inputFile in files:
-        img = cv2.imread(os.path.join(path, inputFile), mode)
+        img = cv2.imread(os.path.join(path, inputFile), mode | cv2.IMREAD_ANYDEPTH)
+
+        byteCount = 1
+        if img.dtype == numpy.uint16:
+            byteCount = 2
+
         height = img.shape[0]
         width = img.shape[1]
-        data = [0] * width*height*depth
+        data = [0] * width*height*depth*byteCount
         l = 0
         for i in range(0, height):
              for j in range(0, (width)):
                 if im.mode == "RGB":
                     for k in range(0,depth):
-                       data[l] = img[i,j,k]
-                       l += 1
+                        for b in range(0,byteCount):
+                            data[l] = (img[i,j,k] & (0xff << (b * 8))) >> (b * 8)
+                            l += 1
                 else:
-                   data[l] = img[i,j]
-                   l += 1
+                    for b in range(0,byteCount):
+                        data[l] = (img[i,j] & (0xff << (b * 8))) >> (b * 8)
+                        l += 1
         allData += data
 
     file = open(sys.argv[2], "wb")
